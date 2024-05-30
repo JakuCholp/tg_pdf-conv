@@ -11,19 +11,21 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
-import environ
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 
-env = environ.Env()
-environ.Env.read_env('.env')
+import os
+import django
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY')
+SECRET_KEY = 'django-insecure-%$6^9z_fot%ylfv4#zlb0w1ai(%&#56cw^o69lhl3inco2jfk1'
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG', cast=bool)
+DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
@@ -77,11 +79,11 @@ WSGI_APPLICATION = 'DocumentBot.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
-        'PASSWORD': env('DB_PASSWORD')
+        'NAME': 'tgpdf',
+        'USER': 'postgres',
+        'HOST': 'localhost',
+        'PORT': '5433',
+        'PASSWORD': '1'
 
     }
 }

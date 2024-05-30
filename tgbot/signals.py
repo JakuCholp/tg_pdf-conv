@@ -1,6 +1,8 @@
 from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 from .models import User_field, User_doc, Field
+from pdf_form_filler import PdfForm
+from io import BytesIO
 
 def get_all_finished_fields(user_doc):
     all_finsihed_fields = User_field.objects.filter(userdoc = user_doc)
@@ -24,5 +26,19 @@ def add_first(sender, instance, **kwargs):
         value = get_all_finished_fields(userdoc)
         userdoc.result = value
         userdoc.save()
+        documenttt = user_document.document.file.name
+        documenttt = documenttt.replace('documents/', '')
+
+        chat_id = user_document.user.chat_id
+        pdf_forma = PdfForm(documenttt)
+        pdf_forma.fill_pdf(value)
+   
+        pdf_bytes = pdf_forma.read()
+        pdf_file = BytesIO(pdf_bytes)
+        file_name_to_show = document.name + chat_id
+        pdf_forma.save(f"tg_pdf-conv/documents/{file_name_to_show}.pdf")
+        user_document.PDF.save(f"documents/{file_name_to_show}", pdf_file)
+
+
 
     

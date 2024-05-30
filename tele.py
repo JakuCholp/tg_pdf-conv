@@ -3,6 +3,7 @@ import logging
 from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command
 import django
+from aiogram.types import FSInputFile
 from asgiref.sync import sync_to_async
 from django.utils import timezone
 from django.db import transaction
@@ -12,6 +13,8 @@ from aiogram.types import (KeyboardButton, Message, ReplyKeyboardMarkup,
                            ReplyKeyboardRemove)
 from aiogram.types import CallbackQuery
 import os
+
+import io
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'DocumentBot.settings')
 django.setup()
 
@@ -21,6 +24,22 @@ data = DocumentType.objects.all()
 result1 = list(data.values_list('name', flat=True))
 
 numbered_items = []
+
+
+import django
+
+
+
+
+
+
+
+
+
+
+
+# для теста сохранения файла в файловую систему
+
 
 
 
@@ -42,7 +61,7 @@ users_waiting_for_product_name = {}
 def get_document_field(document):
     with transaction.atomic():
         all_doc_field = Field.objects.filter(document=document)
-        result11 = list(all_doc_field.values_list('name', flat=True))
+        result11 = list(all_doc_field.values_list('display_name', flat=True))
 
         return result11
 
@@ -337,7 +356,7 @@ def get_user_field(user,userdoc,field):
 @sync_to_async
 def get_all_us_name_fields(user_doc):
     all_finsihed_fields = User_field.objects.filter(userdoc = user_doc)
-    field_names = list(all_finsihed_fields.values_list('field__name', flat=True))
+    field_names = list(all_finsihed_fields.values_list('field__display_name', flat=True))
 
     return field_names
 
@@ -387,7 +406,7 @@ async def cmd_start(message: types.Message):
     else:
         await message.answer("Нет доступных полей для заполнения в этом документе.")
 
-
+import time
 @sync_to_async
 def fill_res(userdoc, value):
     userdoc.result = value
@@ -421,19 +440,23 @@ async def handle_product_name(message: types.Message):
         current_field = fields[current_field_index]
 
         user_field = await sync_to_async(User_field.objects.create)(userdoc = user_doc_id, field = current_field, value = message.text)
-
-
+        doc = str(user_field.userdoc.document.name)
+        iop = doc + str(message.chat.id)
         current_field_index += 1
         if current_field_index < len(fields):
             process["current_field_index"] = current_field_index
             next_field = fields[current_field_index]
-            await message.answer(f"Отлично. Вы заполняете {next_field.name}. Пожалуйста, напишите {next_field.description}:")
+            await message.answer(f"Отлично. Вы заполняете {next_field.display_name}. Пожалуйста, напишите {next_field.description}:")
         else:
             del current_fill_process[user_id]
             all_finished_fields = await get_all_finished_fields(user_doc_id)
             get_res = await fill_res(user_doc_id, all_finished_fields)
-
+            # time.sleep(2)
+            file_path = f'tg_pdf-conv/documents/{iop}.pdf'
+            documentntn = FSInputFile(path=file_path, )
+            await bot.send_document(message.chat.id, document=documentntn)
             await message.answer("Вы успешно заполнили все поля документа. Спасибо!")
+
     
     elif user_id in users_choise_field_change:
         field_name = message.text

@@ -12,6 +12,7 @@ class DocumentType(models.Model):
 
 class Field(models.Model):
     name = models.CharField(max_length=244)
+    display_name = models.CharField(max_length=256 )
     description = models.TextField()
     document = models.ForeignKey(DocumentType, on_delete=models.CASCADE)
     order = models.IntegerField()
@@ -21,6 +22,7 @@ class User_doc(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     document = models.ForeignKey(DocumentType, on_delete=models.CASCADE)
     result = models.CharField(max_length=255)
+    PDF = models.FileField(upload_to='documents/')
 
 class User_field(models.Model):
     userdoc = models.ForeignKey(User_doc, on_delete=models.CASCADE)

@@ -14,7 +14,6 @@ def get_all_finished_fields(user_doc):
 
 
 
-
 @receiver(post_save, sender=User_field)
 def add_first(sender, instance, **kwargs):
     user_document = instance.userdoc

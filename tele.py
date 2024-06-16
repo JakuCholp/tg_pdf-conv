@@ -80,12 +80,12 @@ pool = None
 
 
 
-
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
-    kb = [[types.KeyboardButton(text='select document to change')]]
+
+    kb = [[types.KeyboardButton(text='select')]]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
-    await message.answer("Привет! Я бот, который помогу заполнить pdf_forms. Напишите /select, чтобы получить список pdf-form", reply_markup=keyboard)
+    await message.answer("Привет! Я бот, который помогу заполнить pdf_forms. Напишите select, чтобы получить список pdf-form", reply_markup= keyboard)
 
 users_choise_field_change = {}
 
@@ -111,36 +111,19 @@ async def cmd_startd(message: types.Message):
         pass
     users_choise_field_change[message.from_user.id] = True
 
+
     await message.answer('Выберите поле,которое хотите поменять:', reply_markup=keyboard)
 
 
 
 chan_doc = {}
 
-@dp.message(F.text == 'select document to change')
-async def cmd_startd(message: types.Message):
-    user_id = message.from_user.id
-    chan_doc[user_id] = True
-    user, created = await sync_to_async(User_tg.objects.get_or_create)(chat_id=user_id)
-    userdoc_list = await list_user_doc(user)
-
-    buttons = []
 
 
-    for i in(userdoc_list):
-        button_text = f"{i}"
-        button = InlineKeyboardButton(text=button_text, callback_data=str(i))
-        buttons.append(button)
-
-    inline_keyboard = [buttons] 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
-
-
-    await message.answer('Выберите документ,который хотите поменять:', reply_markup=keyboard)
-
-
-
-
+# @dp.callback_query()
+# async def process_callback(callback_query: types.CallbackQuery):
+#     page_number = int(callback_query.data.split('_')[1])
+#     await callback_query.message.reply("Вот ваш список элементов:", reply_markup= await get_pagination_keyboard(page_number))
 
 users_field_change = {}
 
@@ -151,17 +134,22 @@ async def process_callback(callback_query: types.CallbackQuery):
     
     if user_id in users_waiting_for_product_name:
         selected_option = callback_query.data
-        message_sim = types.Message(
-            message_id=callback_query.message.message_id,
-            from_user=callback_query.from_user,
-            date=callback_query.message.date,
-            chat=callback_query.message.chat,
-            content_type='text',
-            text=selected_option,
-            reply_to_message_id=callback_query.message.message_id,
-        )
-        users_waiting_for_product_name[message_sim.from_user.id] = True
-        await handle_product_name(message_sim)
+        if 'next_' in selected_option or 'prev_' in selected_option:
+            page_number = int(callback_query.data.split('_')[1])
+            await callback_query.message.reply("Вот ваш список элементов:", reply_markup= await get_pagination_keyboard(page_number))
+        else:
+            message_sim = types.Message(
+                message_id=callback_query.message.message_id,
+                from_user=callback_query.from_user,
+                date=callback_query.message.date,
+                chat=callback_query.message.chat,
+                content_type='text',
+                text=selected_option,
+                reply_to_message_id=callback_query.message.message_id,
+            )
+            users_waiting_for_product_name[message_sim.from_user.id] = True
+
+            await handle_product_name(message_sim)
     elif user_id in users_choise_field_change:
         selected_option = callback_query.data
         message_sim = types.Message(
@@ -212,26 +200,7 @@ async def process_callback(callback_query: types.CallbackQuery):
 
 
 
-# chan_doc = {}
 
-# @dp.message(Command("choose_doc_change"))
-# async def cmd_startd(message: types.Message):
-#     user_id = message.from_user.id
-#     await message.answer(output)
-#     chan_doc[user_id] = True
-#     await message.answer('Выберите документ, который хотите поменять')
-
-
-
-
-
-
-
-# @dp.message(Command("select"))
-# async def cmd_start(message: types.Message):
-#     await message.answer(output)
-#     users_waiting_for_product_name[message.from_user.id] = True
-#     await message.answer("Пожалуйста, введите название PDF-формы:")
 
 @sync_to_async
 def get_all_doc_type():
@@ -243,21 +212,52 @@ def get_all_doc_type():
 
 
 
-@dp.message(Command("select"))
-async def cmd_start(message: types.Message):
 
+
+# data = DocumentType.objects.all()
+# result1 = list(data.values_list('name', flat=True)) 
+
+
+ITEMS_PER_PAGE = 5
+
+async def get_pagination_keyboard(page: int):
     result1 = await get_all_doc_type()
-    buttons = []
+    start = page * ITEMS_PER_PAGE
+    end = start + ITEMS_PER_PAGE
+    buttons = [[InlineKeyboardButton(text=item, callback_data= item)] for item in result1[start:end]]
+    lena = len(result1)
 
-    for i in(result1):
-        button_text = f"{i}"
-        button = InlineKeyboardButton(text=button_text, callback_data=str(i))
-        buttons.append(button)
 
-    inline_keyboard = [buttons] 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
+
+    navigation_buttons = []
+    if page > 0:
+        navigation_buttons.append(InlineKeyboardButton(text="<< Назад", callback_data=f'prev_{page - 1}'))
+    if end < lena:
+        navigation_buttons.append(InlineKeyboardButton(text="Вперед >>", callback_data=f'next_{page + 1}'))
+
+    if navigation_buttons:
+        buttons.append(navigation_buttons)
+
+    return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+
+
+
+
+
+
+
+
+
+
+for_select = {}
+
+@dp.message(F.text == 'select')
+async def cmd_start(message: types.Message):
+    user_id = message.from_user.id
     users_waiting_for_product_name[message.from_user.id] = True
-    await message.answer("Выберите PDF-форму:", reply_markup=keyboard)
+    await message.answer("Выберите PDF-форму:", reply_markup=  await get_pagination_keyboard(0))
 
 
 
@@ -306,6 +306,13 @@ def get_field(field_name, document):
     with transaction.atomic():
         field = Field.objects.get(name = field_name, document = document)
         return field
+    
+@sync_to_async
+def get_display_field(display_name, document):
+    with transaction.atomic():
+        field = Field.objects.get(display_name = display_name, document = document)
+        return field
+
     
 
 @sync_to_async
@@ -384,7 +391,7 @@ def get_all_finished_fields(user_doc):
 
 current_fill_process = {}
 
-@dp.message(Command("fill"))
+@dp.message(F.text == 'fill')
 async def cmd_start(message: types.Message):
     kb = [[types.KeyboardButton(text='select field to change')]]
     keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
@@ -402,7 +409,7 @@ async def cmd_start(message: types.Message):
             "current_field_index": 0,
             "fields": all_fields
         }
-        await message.answer(f"Отлично. Вы заполняете {all_fields[0].name}. Пожалуйста, напишите {all_fields[0].description}:", reply_markup=keyboard)
+        await message.answer(f"Отлично. Вы заполняете {all_fields[0].display_name}. Пожалуйста, напишите {all_fields[0].description}:", reply_markup=keyboard)
     else:
         await message.answer("Нет доступных полей для заполнения в этом документе.")
 
@@ -426,9 +433,18 @@ async def handle_product_name(message: types.Message):
             if document_name in result1:
                 documen = await sync_to_async(DocumentType.objects.get)(name=document_name)
                 new_user_doc = await sync_to_async(User_doc.objects.create)(user=user, document=documen)
-                text = f'Отлично. Начните заполнять документ "{documen.name}". Напишите /fill чтобы начать'
+                text = f'Отлично. Начните заполнять документ "{documen.name}". Напишите fill чтобы начать'
+                # buttons = []
+                # button = InlineKeyboardButton(text='/fill', callback_data='/fill')
+                # buttons.append(button)
+                # inline_keyboard = [buttons] 
+                # keyboard = InlineKeyboardMarkup(inline_keyboard=inline_keyboard)
+                kb = [[types.KeyboardButton(text='fill')]]
+                keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+
+
             
-                await bot.send_message(chat_id=message.chat.id, text=text)
+                await bot.send_message(chat_id=message.chat.id, text=text, reply_markup=keyboard)
     elif user_id in current_fill_process:
         process = current_fill_process[user_id]
         user = await sync_to_async(User_tg.objects.get)(chat_id=user_id) 
@@ -454,15 +470,18 @@ async def handle_product_name(message: types.Message):
             # time.sleep(2)
             file_path = f'tg_pdf-conv/documents/{iop}.pdf'
             documentntn = FSInputFile(path=file_path, )
+            kb = [[types.KeyboardButton(text='select')]]
+            keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
             await bot.send_document(message.chat.id, document=documentntn)
-            await message.answer("Вы успешно заполнили все поля документа. Спасибо!")
+            await message.answer("Вы успешно заполнили все поля документа. Спасибо!", reply_markup=keyboard)
 
     
     elif user_id in users_choise_field_change:
-        field_name = message.text
+        display_field_name = message.text
+
         user, created = await sync_to_async(User_tg.objects.get_or_create)(chat_id=user_id)
         document = await get_latest_user_doc(user)
-        field = await get_field(field_name=field_name, document=document)
+        field = await get_display_field(display_name=display_field_name, document=document)
         userdoc = await latest_user_doc(user)
         user_field = await get_user_field(user = user, field = field, userdoc = userdoc )
         user_fieldchange = await sync_to_async(UserFieldsChange.objects.create)(user = user, user_field = user_field)
@@ -472,7 +491,9 @@ async def handle_product_name(message: types.Message):
         upd_value = message.text
         User_field_change = await get_latest_user_fields_change(user, upd_value)
         del users_field_change[user_id]
-        await bot.send_message(chat_id=message.chat.id, text = "Чтобы продолжить заполнения напишите /fill")
+        kb = [[types.KeyboardButton(text='fill')]]
+        keyboard = types.ReplyKeyboardMarkup(keyboard=kb)
+        await bot.send_message(chat_id=message.chat.id, text = "Чтобы продолжить заполнения напишите fill", reply_markup=keyboard)
     elif user_id in chan_doc:
         user, created = await sync_to_async(User_tg.objects.get_or_create)(chat_id=user_id)
         doc_name = message.text
